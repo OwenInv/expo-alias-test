@@ -1,0 +1,40 @@
+diff --git a/node_modules/@expo/config-plugins/build/android/Manifest.js b/node_modules/@expo/config-plugins/build/android/Manifest.js
+index 10805f2..c047057 100644
+--- a/node_modules/@expo/config-plugins/build/android/Manifest.js
++++ b/node_modules/@expo/config-plugins/build/android/Manifest.js
+@@ -88,7 +88,10 @@ function getMainActivityOrThrow(androidManifest) {
+ function getRunnableActivity(androidManifest) {
+   // Get enabled activities
+   const enabledActivities = androidManifest?.manifest?.application?.[0]?.activity?.filter?.(e => e.$['android:enabled'] !== 'false' && e.$['android:enabled'] !== false);
+-  if (!enabledActivities) {
++  // Get enabled activity-aliases
++  const enabledActivityAliases = androidManifest?.manifest?.application?.[0]?.['activity-alias']?.filter?.(e => e.$['android:enabled'] !== 'false' && e.$['android:enabled'] !== false);
++
++  if (!enabledActivities && !enabledActivityAliases) {
+     return null;
+   }
+ 
+@@ -102,6 +105,23 @@ function getRunnableActivity(androidManifest) {
+       }
+     }
+   }
++
++  // If no activity found, check activity-aliases
++  for (const activityAlias of enabledActivityAliases) {
++    if (Array.isArray(activityAlias['intent-filter'])) {
++      for (const intentFilter of activityAlias['intent-filter']) {
++        if (intentFilter.action?.find(action => action.$['android:name'] === 'android.intent.action.MAIN') && intentFilter.category?.find(category => category.$['android:name'] === 'android.intent.category.LAUNCHER')) {
++          // Find the corresponding activity for the alias
++          for (const activity of enabledActivities) {
++            if (activity.$['android:name'] === activityAlias.$['android:targetActivity']) {
++              return activity;
++            }
++          }
++        }
++      }
++    }
++  }
++
+   return null;
+ }
+ function getMainActivity(androidManifest) {
